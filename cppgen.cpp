@@ -11,7 +11,7 @@ std::map<int, std::string> name_map;
 
 int main(int argc, char * argv[])
 {
-	const char * xml_file = "rpcall.xml";
+	const char * xml_file = "rpcalls.xml";
 	if (argc > 1) xml_file = argv[1];
 	
 	XMLDocument doc;
@@ -31,13 +31,13 @@ void ParseInlProtocol(XMLDocument* doc)
 {
 
 	name_map.clear();
-	XMLElement * ele = doc.FirstChildElement("protocol");
+	XMLElement * ele = doc->RootElement()->FirstChildElement("protocol");
 	for (;ele ; ele = ele->NextSiblingElement("protocol"))
 	{
 		string protoname (ele->Attribute("name"));
 		unsigned protosize = ele->UnsignedAttribute("maxsize");
 		int protoprior = ele->IntAttribute("prior");
-		int types = ele->IntAttribute("types");
+		int types = ele->IntAttribute("type");
 		GenInl inl(protoname);
 		inl.setprior(protoprior);
 		inl.setsize(protosize);
@@ -46,7 +46,7 @@ void ParseInlProtocol(XMLDocument* doc)
 			fprintf(stderr,"type is duplatied protocol name = %s\n",protoname.c_str());
 			return;
 		}
-		name_map.insert(std::make_pair(types,"PROTOCOL_" + protoname));
+		name_map.insert(std::make_pair(types,inl.getprotoname()));
 		XMLElement * childele = ele->FirstChildElement();
 
 		for (;childele ; childele = childele->NextSiblingElement())
@@ -55,13 +55,13 @@ void ParseInlProtocol(XMLDocument* doc)
 			var.varname = childele->Attribute("name");
 			var.vartype = childele->Attribute("type");
 			bool var.hasref = false;
-			char * attr;
-			if (attr = childele->Attribute("attr") && strcmp(attr,"ref") == 0)
+			const char * attr = childele->Attribute("attr");
+			if (attr && strcmp(attr,"ref") == 0)
 			{
 				var.hasref = true;
 			} 
-			char *vardefault;
-			if (vardefault = childele->Attribute("default"))
+			const char *vardefault = childele->Attribute("default");
+			if (vardefault)
 			{
 				var.strdefault = vardefault;
 			}
