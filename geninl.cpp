@@ -1,7 +1,6 @@
-#include <string>
-#include "GenInl.h"
+#include <map>
+#include "geninl.h"
 #include "algorithm"
-using std::string;
 using std::transform;
 
 extern 	std::map<int, std::string> name_map;
@@ -29,22 +28,19 @@ GenInl::GenInl(const string& classname): _classname(classname),_filename(classna
 	transform(classname.begin(),classname.end(),_filename.begin(),to_lower);
 	transform(classanem.begin(), classname.end(), _protoname.being(),to_upper);
 	_protoname = "PROTOCOL_" + _protoname;
+	len = addlen = 0;
 }
 
 void GenInl::genparam()
 {
-	char buf[4096] = {0};
-	int len = 0, addlen = 0;
-
-	addlen = snprintf(buf,sizoef(buf)-1,"%s","\tpublic:\r\n");
+	addlen = snprintf(buf+len,sizoef(buf)-1-len,"%s","\tpublic:\n");
+	len += addlen;
 	int size_vec = _vec_protovar.size();
-	for (int i = 0; i < size_vec ; ++i)
+	for (size_t i = 0; i < size_vec ; ++i)
 	{
 		protovar& var = _vec_protovar[i];
-		addlen = snprintf(buf,sizeof(buf)-1-len,"%s","\t\t");
-		len += addlen;
-		string size_type pos = 0;
 
+		string::size_type pos = 0;
 		if((pos = var.vartype.find("&lt;")) != string::npos)
 		{
 			var.vartype.replace(pos,4,"<");
@@ -55,183 +51,235 @@ void GenInl::genparam()
 			var.vartype.replace(pos,4,">");
 		}
 
-		string param = "\t\t" + var.vartype + " " + var.varname + ";\r\n";
-		addlen = snprintf(buf,sizeof(buf)-len-1,"%s",param.c_str());
+		string param = "\t\t" + var.vartype + " " + var.varname + ";\n";
+		addlen = snprintf(buf + len,sizeof(buf)-len-1,"%s",param.c_str());
 		len += addlen;
 	}
-	string protype = "enum { PROTOCOL_TYPE = " + _protoname + " };\r\n";
-	addlen = snprintf(buf,sizeof(buf)-len-1,"%s",protype.c_str());
+	string protype = "\t\tenum { PROTOCOL_TYPE = " + _protoname + " };\n";
+	addlen = snprintf(buf+len,sizeof(buf)-len-1,"%s",protype.c_str());
 	len += addlen;
 }
 
 void GenInl::genctor()
 {
-	char buf[4096] = {0};
-	int len = 0, addlen = 0;
-
-	addlen = snprintf(buf,sizeof(buf)-l-len,"%s","\tpublic:\r\n");
+	addlen = snprintf(buf+len,sizeof(buf)-l-len,"%s","\tpublic:\n");
 	len += addlen;
 
-	string strctor = "\t\t" + _classname + "() { type = " + _protoname + "; }\r\n";
-	addlen = snprintf(buf,sizeof(buf)-len-1,"%s",strctor.c_str());
+	string strctor = "\t\t" + _classname + "() { type = " + _protoname + "; }\n";
+	addlen = snprintf(buf+len,sizeof(buf)-len-1,"%s",strctor.c_str());
 	len += addlen;
 
-	string strctor = "\t\t" + _protoname+"(void*) : Protocol(PROTOCOL" + _protoname+") { }\r\n";
-	addlen = snprintf(buf,sizeof(buf)-len-1,"%s",strctor.c_str());
+	string strctor = "\t\t" + _protoname+"(void*) : Protocol(" + _protoname+") { }\n";
+	addlen = snprintf(buf+len,sizeof(buf)-len-1,"%s",strctor.c_str());
 	len += addlen; 
 
 	size_t vec_size = _vec_protovar.size();
-	string strctorparam = "\t\t" + _protoname + " (";
-	for (int i = 0; i < vec_size ; ++i)
+	string strctorparam = "\t\t" + _classname + " (";
+	if (vec_size % 3)
 	{
-		protovar& var = _vec_protovar[i];
-		if (var.hasref)
+		for (size_t i = 0; i < vec_size ; ++i)
 		{
-			strctorparam += "const " + var.vartyep + "& " + var.varname;
-		}
-		else
-		{
-			strctorparam += var.vartype + " " + var.varname;
-		}
-
-		if (var.strdefault != "")
-		{
-			strcotparam += " = " + var.strdefault;
-		}
-
-		if (i < size_vec -1 )
-		{
-			strctorparam +=  ","
-			if (i == size_vec -2)
+			protovar& var = _vec_protovar[i];
+			string strvar;
+			if (var.hasref)
 			{
-				strctorparam += "\r\n";
-			}
-		}
-		else
-		{
-			strctorparam += ")\r\n";
-		}
-	}
-
-	addlen = snprintf(buf,sizeof(buf)-1-len,"%s",strctorparam.c_str());
-	len += addlen;
-
-	strparam += "\t\t\t: ";
-	for (int i = 0; i < size_vec ; ++i)
-	{
-		protovar& var = _vec_protovar[i];
-		if (i < size_vec-1)
-		{
-			strparam += var.varname +"(l_"+var.varname+")";
-			if (i < size_vec -2)
-			{
-				strparam += ","
+				strvar = "const " + var.vartyep + "& l_" + var.varname;
 			}
 			else
 			{
-				strparam +="\r\n";
+				strvar = var.vartype + " l_" + var.varname;
 			}
-		}
-		else
+
+			if (var.strdefault != "")
+			{
+				strvar += " = " + var.strdefault;
+			}
+
+			if (i < vec_size/3 * 3)
+			{
+				if (i % 3 == 2)
+				{
+					strvar += ",\n";
+				}
+				else
+				{
+					strvar += ",";
+					if (i % 3 == 0 && i >= 3)
+					{
+						strvar += "\t\t\t" + strvar;
+					}
+				}
+			}
+			else
+			{
+				if (i == vec_size -1)
+				{	
+					strvar += ")\n";
+				}
+				else
+				{
+					strvar += ",";
+				}
+				if (i % 3 == 0 && i >= 3)
+				{
+					strvar = "\t\t\t" + strvar;
+				}
+			}
+			strctorparam += strvar;
+		}	
+	}
+	else
+	{
+		for (size_t i = 0; i < vec_size ; ++i)
 		{
-			strparam +=","+var.varname+"(l_"+var.varname+")\r\n";
+			protovar& var = _vec_protovar[i];
+			string strvar;
+			if (var.hasref)
+			{
+				strvar = "const " + var.vartyep + "& l_" + var.varname;
+			}
+			else
+			{
+				strvar = var.vartype + " l_" + var.varname;
+			}
+
+			if (var.strdefault != "")
+			{
+				strvar += " = " + var.strdefault;
+			}
+
+			if (i != vec_size -1 )
+			{
+				strvar +=  ","
+				if (i % 3 == 2)
+				{
+					strvar += "\n";
+				}
+				if (i % 3 == 0 && i >= 3)
+				{
+					strvar = "\t\t\t" + strvar;
+				}
+			}
+			else
+			{
+				strvar += ")\n";
+			}
+			strctorparam += strvar;
 		}
 	}
-	strparam += "\t\t{\r\n\t\t\ttype = " + _protoname + ";\r\n\t\t}\r\n";
-	addlen = snprintf(buf,sizeof(buf)-1-len,"%s",strparam.c_str());
+
+	addlen = snprintf(buf+len,sizeof(buf)-1-len,"%s",strctorparam.c_str());
 	len += addlen;
 
-	string strcopyctor = "\r\n";
-	strcopyctor += "\t\t" + _protoname + "(const " + _protoname + " &rhs";
+	strparam += "\t\t\t : ";
+	for (size_t i = 0; i < vec_size ; ++i)
+	{
+		protovar& var = _vec_protovar[i];
+		string strvar = var.varname +"(l_"+var.varname+")";
+		if (i >０)
+		{
+			strvar = "," + strvar;
+			if (i % 3 == 0 && i >= 3)
+			{
+				strvar = "\t\t\t" + strvar;
+			}
+			if (i % 3 == 2 || i == vec_size -1)
+			{
+				strvar += "\n";
+			}
+		}
+		if (vec_size == 1)
+		{
+			strvar += "\n";
+		}
+		strparam += strvar;
+	}
+	strparam += "\t\t{\n\t\t\ttype = " + _protoname + ";\n\t\t}\n";
+	addlen = snprintf(buf+len,sizeof(buf)-1-len,"%s",strparam.c_str());
+	len += addlen;
+
+	string strcopyctor = "\n";
+	strcopyctor += "\t\t" + _protoname + "(const " + _protoname + " &rhs)\n";
 	strcopyctor += "\t\t\t: Protocol(rhs)";
-	for (int i = 0; i < size_vec ; ++i)
+	for (size_t i = 0; i < vec_size ; ++i)
 	{
 		protovar & var = _vec_protovar[i];
-		if (i < size_vec - 1)
+		string strvar = "," + var.varname + "(rhs." + var.varname + ")";
+		if (i % 3 == 0 && i >= 3)
 		{
-			strcopyctor += "," + var.varname + "(rhs." + var.varname + ")";
-			if (i == size_vec -2)
+			strvar = "\t\t\t" + strvar;
+		}
+		if (i % 3 == 2 || i == vec_size -1)
+		{
+			if (i == vec_size - 1)
 			{
-				strcopyctor += "\r\n";
+				strvar += " { }";
 			}
+			strvar += "\n";
 		}
-		else
-		{
-			strcopyctor += "," + var.varname + "(rhs." + var.varname + " { }\r\n";
-		}
+		strcopyctor += strvar;
 	}
-	addlen = snprintf(buf,sizeof(buf)-1-len,"%s",strcopyctor.c_str());
+	addlen = snprintf(buf+len,sizeof(buf)-1-len,"%s",strcopyctor.c_str());
 	len += addlen;
 
-	string strclone = "\r\n\t\t";
-	strclone = "GNET::Protocol *Clone() const { return new " + _protoname + "(*this); }\r\n";
-	addlen = snprintf(buf,sizeof(buf)-1-len,"%s",strclone.c_str());
+	string strclone = "\n\t\t";
+	strclone = "GNET::Protocol *Clone() const { return new " + _protoname + "(*this); }\n";
+	addlen = snprintf(buf+len,sizeof(buf)-1-len,"%s",strclone.c_str());
 	len += addlen;
 }
 
 void GenInl::genmarshal()
 {
-	char buf[4096] = {0};
-	int len = 0;
-	int addlen = 0;
-
-	string strmarshal = "\r\n\t\t";
-	strmarshal += "OctetsStream& marshal(OctetsStream & os) const\r\n";
-	strmarshal += "\t\t{\r\n";
+	string strmarshal = "\n\t\t";
+	strmarshal += "OctetsStream& marshal(OctetsStream & os) const\n";
+	strmarshal += "\t\t{\n";
 	int vec_size = _vec_protovar.size();
 	for (int i = 0; i < vec_size; ++i )
 	{
 		protovar& var = _vec_protovar[i];
-		strmarshal += "\t\t\tos << " + var.varname + "\r\n";
+		strmarshal += "\t\t\tos << " + var.varname + "\n";
 	}
-	strmarshal += "\t\t\\treturn os";
-	strmarshal += "\t\t}\r\n";
-	addlen = snprintf(buf,sizeof(buf)-1-len,"%s",strmarshal.c_str());
+	strmarshal += "\t\t\\treturn os;\n";
+	strmarshal += "\t\t}\n";
+	addlen = snprintf(buf+len,sizeof(buf)-1-len,"%s",strmarshal.c_str());
 	len += addlen;
 }
 
 void GenInl::genunmarshal()
 {
-	char buf[4096] = {0};
-	int len = 0;
-	int addlen = 0;
-
-	string strmarshal = "\r\n\t\t";
-	strmarshal += "OctetsStream& unmarshal(OctetsStream & os) const\r\n";
-	strmarshal += "\t\t{\r\n";
+	string strmarshal = "\n\t\t";
+	strmarshal += "OctetsStream& unmarshal(const OctetsStream & os)\n";
+	strmarshal += "\t\t{\n";
 	int vec_size = _vec_protovar.size();
 	for (int i = 0; i < vec_size; ++i )
 	{
 		protovar& var = _vec_protovar[i];
-		strmarshal += "\t\t\tos >> " + var.varname + "\r\n";
+		strmarshal += "\t\t\tos >> " + var.varname + "\n";
 	}
-	strmarshal += "\t\t\\treturn os";
-	strmarshal += "\t\t}\r\n";
-	addlen = snprintf(buf,sizeof(buf)-1-len,"%s",strmarshal.c_str());
+	strmarshal += "\t\t\treturn os;\n";
+	strmarshal += "\t\t}\n";
+	addlen = snprintf(buf+len,sizeof(buf)-1-len,"%s",strmarshal.c_str());
 	len += addlen;
 }
 
 void GenInl::genprior()
 {
-	char buf[4096] = {0};
-	int len = 0;
-	int addlen = 0;
-
-	string strprior = "\t\t";
-	strprior += "int PriorPolicy( ) const { return " + _prior + "; }\r\n";
-	addlen = snprintf(buf,sizeof(buf)-1-len,"%s",strprior.c_str());
+	if (_prior == "0")
+	{
+		return;
+	}
+	string strprior = "\n\t\t";
+	strprior += "int PriorPolicy( ) const { return " + _prior + "; }\n";
+	addlen = snprintf(buf+len,sizeof(buf)-1-len,"%s",strprior.c_str());
 	len += addlen;
 }
 
 void GenInl::genosize()
 {
-	char buf[4096] = {0};
-	int len = 0;
-	int addlen = 0;
 
-	string strsize = "\t\t";
-	strsize += "int SizePolicy(size_t size) const { return size <= " + _size + "; }\r\n";
-	addlen = snprintf(buf,sizeof(buf)-1-len,"%s",strsize.c_str());
+	string strsize = "\n\t\t";
+	strsize += "bool SizePolicy(size_t size) const { return size <= " + _size + "; }\r\n";
+	addlen = snprintf(buf+len,sizeof(buf)-1-len,"%s",strsize.c_str());
 	len += addlen;
 }
 
@@ -239,19 +287,23 @@ GenInl::~GenInl()
 {
 	genparam();
 	genctor();
-	genclone();
 	genmarshal();
 	genunmarshal();
 	genprior();
 	gensize();
+
+	string strfile = "inl/" + _filename;
+	FILE * fp = fopen(strfile.c_str(),"wb");
+	fwrite(buf,1,len,fp);
+	fclose(fp);
 }
 
-void GenInl::Addvar(const protovar & var)
+void GenInl::addvar(const protovar & var)
 {
 	_vec_protovar.push_back(var);
 }
 
-void GenInl::setPrior(const string& prior)
+void GenInl::setprior(const string& prior)
 {
 	_prior = prior;
 }
