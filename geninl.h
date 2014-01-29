@@ -1,6 +1,9 @@
 #ifndef __GENINL_H_
 #define __GENINL_H_
 
+#include <string>
+#include <vector>
+
 struct protovar
 {
 	string vartype;
@@ -18,20 +21,28 @@ class GenInl
 			std::vector<protovar> _vec_protovar;
 			string _prior;
 			string _size;
+			
+			char buf[4096];
+			int len;
+			int addlen;
 
 	public:
 		GenInl(const string&  classname);
 		~GenInl();
-		void Addvar(const protovar & var);
+		void addvar(const protovar & var);
+		void setprior(const string& prior);
+		void setsize(const string& size);
+		string& getprotoname()
+		{
+			return _protoname;
+		}
 
 	protected:
 		void genparam();
 		void genctor();
-		void genclone();
 		void genmarshal();
 		void genunmarshal();
 		void genprior();
 		void gensize();
 };
-
 #endif
